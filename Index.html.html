@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการสต็อกและซื้อขายสินค้า (พร้อมรูปภาพ)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2, h3 { color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #2980b9; }
+        .btn-sell { background-color: #2ecc71; }
+        .btn-sell:hover { background-color: #27ae60; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
+        th { background-color: #f2f2f2; }
+        .product-img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+        .section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .receipt { background: #e8f8f5; border: 1px dashed #27ae60; padding: 15px; border-radius: 4px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📦 ระบบจัดการสต็อกและซื้อขายสินค้า (มีรูปประกอบ)</h2>
+
+    <!-- ส่วนตารางแสดงสินค้า -->
+    <div class="section">
+        <h3>รายการสินค้าในสต็อก</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>รูปภาพ</th>
+                    <th>สินค้า</th>
+                    <th>ราคา (บาท)</th>
+                    <th>คงเหลือ (ชิ้น)</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryTable">
+                <!-- ข้อมูลจะถูกเติมด้วย JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ส่วนเพิ่ม/เติมสต็อก -->
+    <div class="section">
+        <h3>เพิ่มสินค้า / เติมสต็อก</h3>
+        <div class="form-group">
+            <label>ชื่อสินค้า:</label>
+            <input type="text" id="addName" placeholder="เช่น ปากกา, สมุด">
+        </div>
+        <div class="form-group">
+            <label>ราคาขายต่อหน่วย (บาท):</label>
+            <input type="number" id="addPrice" min="0" step="0.5" placeholder="0.00">
+        </div>
+        <div class="form-group">
+            <label>จำนวนที่ต้องการเพิ่ม:</label>
+            <input type="number" id="addQty" min="1" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label>ลิงก์รูปภาพสินค้า (Image URL):</label>
+            <input type="text" id="addImage" placeholder="เช่น https://example.com/image.jpg หรือเว้นว่างไว้">
+        </div>
+        <button onclick="addStock()">บันทึกเข้าสต็อก</button>
+    </div>
+
+    <!-- ส่วนขายสินค้า -->
+    <div class="section">
+        <h3>ขายสินค้า</h3>
+        <div class="form-group">
+            <label>เลือกสินค้า:</label>
+            <select id="sellSelect"></select>
+        </div>
+        <div class="form-group">
+            <label>จำนวนที่ต้องการซื้อ:</label>
+            <input type="number" id="sellQty" min="1" value="1">
+        </div>
+        <button class="btn-sell" onclick="sellItem()">ยืนยันการขาย</button>
+        
+        <div id="receiptArea"></div>
+    </div>
+</div>
+
+<script>
+    // ข้อมูลเริ่มต้น (มีลิงก์รูปตัวอย่าง)
+    let inventory = {
+        "ปากกา": { price: 15.0, qty: 50, image: "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=100" },
+        "สมุด": { price: 45.0, qty: 30, image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100" },
+        "ยางลบ": { price: 10.0, qty: 100, image: "https://images.unsplash.com/photo-1611532736597-de2d1265f874?w=100" }
+    };
+
+    function updateUI() {
+        const tableBody = document.getElementById("inventoryTable");
+        const sellSelect = document.getElementById("sellSelect");
+        
+        tableBody.innerHTML = "";
+        sellSelect.innerHTML = "";
+
+        for (let name in inventory) {
+            let item = inventory[name];
+            let imgSrc = item.image ? item.image : "https://via.placeholder.com/50?text=No+Image";
+
+            // เติมตาราง
+            let row = `<tr>
+                <td><img src="${imgSrc}" class="product-img" onerror="this.src='https://via.placeholder.com/50?text=Error'"></td>
+                <td>${name}</td>
+                <td>${item.price.toFixed(2)}</td>
+                <td>${item.qty}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+
+            // เติมตัวเลือกใน dropdown ขายสินค้า
+            let option = `<option value="${name}">${name} (เหลือ ${item.qty} ชิ้น)</option>`;
+            sellSelect.innerHTML += option;
+        }
+    }
+
+    function addStock() {
+        let name = document.getElementById("addName").value.trim();
+        let price = parseFloat(document.getElementById("addPrice").value);
+        let qty = parseInt(document.getElementById("addQty").value);
+        let image = document.getElementById("addImage").value.trim();
+
+        if (!name || isNaN(price) || isNaN(qty) || price < 0 || qty <= 0) {
+            alert("กรุณากรอกชื่อ ราคา และจำนวนให้ถูกต้องครบถ้วน");
+            return;
+        }
+
+        if (inventory[name]) {
+            inventory[name].qty += qty;
+            inventory[name].price = price;
+            if (image) {
+                inventory[name].image = image; // อัปเดตแควรูปใหม่ถ้าใส่มา
+            }
+            alert(`อัปเดตสต็อก ${name} เรียบร้อยแล้ว!`);
+        } else {
+            inventory[name] = { 
+                price: price, 
+                qty: qty, 
+                image: image ? image : "https://via.placeholder.com/50?text=No+Image" 
+            };
+            alert(`เพิ่มสินค้าใหม่ ${name} สำเร็จ!`);
+        }
+
+        // ล้างค่าในฟอร์ม
+        document.getElementById("addName").value = "";
+        document.getElementById("addPrice").value = "";
+        document.getElementById("addQty").value = "";
+        document.getElementById("addImage").value = "";
+
+        updateUI();
+    }
+
+    function sellItem() {
+        let name = document.getElementById("sellSelect").value;
+        let qty = parseInt(document.getElementById("sellQty").value);
+        let receiptArea = document.getElementById("receiptArea");
+
+        if (!name || isNaN(qty) || qty <= 0) {
+            alert("กรุณาระบุจำนวนให้ถูกต้อง");
+            return;
+        }
+
+        if (qty > inventory[name].qty) {
+            alert(`สินค้าหมด! ในสต็อกเหลือแค่ ${inventory[name].qty} ชิ้น`);
+            return;
+        }
+
+        inventory[name].qty -= qty;
+        let totalPrice = qty * inventory[name].price;
+
+        receiptArea.innerHTML = `
+            <div class="receipt">
+                <h4>📄 ใบเสร็จรับเงิน</h4>
+                <p><b>สินค้า:</b> ${name}</p>
+                <p><b>จำนวน:</b> ${qty} ชิ้น</p>
+                <p><b>ราคารวม:</b> ${totalPrice.toFixed(2)} บาท</p>
+            </div>
+        `;
+
+        updateUI();
+    }
+
+    // โหลดหน้าเว็บครั้งแรก
+    updateUI();
+</script>
+
+</body>
+</html>
